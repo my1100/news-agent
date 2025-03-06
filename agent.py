@@ -10,17 +10,14 @@ from flask import Flask, request, jsonify
 from langchain_core.messages import HumanMessage, SystemMessage
 
 # DeepSeek API configuration
-os.environ["DEEPSEEK_API_KEY"] = "sk-e2d15161b9a34264926b9e803b957061"  # Replace with your actual API key
+os.environ["DEEPSEEK_API_KEY"] = "redacted"
 ENDPOINT = "https://api.deepseek.com/v1"
 
-# Define the Conversation State
 class State(TypedDict):
     messages: Annotated[List[Dict[str, str]], add_messages]  # Store conversation messages
 
-# Create a state graph
 graph_builder = StateGraph(State)
 
-# Load DeepSeek LLM
 llm = ChatDeepSeek(
     model="deepseek-chat",
     temperature=0.7,  # Adjust as needed
@@ -34,34 +31,15 @@ def chatbot(state: State):
     # Extract the latest user message
     return {"messages": [llm.invoke(state["messages"])]}
 
-    # latest_message = state["messages"][-1]
-    # if isinstance(latest_message, HumanMessage):
-    #     user_input = latest_message.content  # Extract content from HumanMessage
-    # else:
-    #     user_input = latest_message["content"]  # Fallback for dictionary format
-    #
-    # # Get AI response
-    # response = llm.invoke(state["messages"])
-    #
-    # # Add AI response to history
-    # state["messages"].append(AIMessage(content=response.content))
-    #
-    # return state
-
-# Add chatbot node
 graph_builder.add_node("chatbot", chatbot)
 
-# Connect the Graph
 graph_builder.add_edge(START, "chatbot")  # Entry point
 graph_builder.add_edge("chatbot", END)  # Exit point
 
-# Compile the graph
 graph = graph_builder.compile()
 
-# Create Web Interface with Flask
 app = Flask(__name__)
 
-# Global variable to store chat history (for simplicity; use a database in production)
 chat_history = []
 
 @app.route("/chat", methods=["POST"])
@@ -76,14 +54,10 @@ def chat():
     # Add user message to chat history
     chat_history.append(HumanMessage(content=user_input))
 
-    # Invoke the graph to get AI response
     state = {"messages": chat_history}
     updated_state = graph.invoke(state)
 
-    # Update chat history with AI response
     chat_history = updated_state["messages"]
-
-    # Return the latest AI response
     return jsonify({"response": chat_history[-1].content})
 
 @app.route("/")
